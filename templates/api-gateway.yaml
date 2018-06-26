@@ -1,0 +1,121 @@
+Description: >
+  Create CodePipeline and CodeBuild resources for Blue/Green Deployment on ECS. For further reference, please review BluegreenRepo ==> https://github.com/awslabs/ecs-blue-green-deployment
+
+Parameters:
+  GitHubRepo:
+    Type: String
+
+  TemplateBucket:
+    Type: String
+
+
+Resources:
+  BlueGreenFlipLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub lambda-${GitHubRepo}-blue-green-swap
+      Handler: blue_green_flip.handler
+      Runtime: python2.7
+      Description: !Sub lambda-${GitHubRepo}-blue-green-swap
+      Code:
+        S3Bucket: !Ref TemplateBucket
+        S3Key: scripts.zip
+      MemorySize: 128
+      Timeout: 60
+      Environment:
+        Variables:
+          elb_name: !Ref GitHubRepo
+      Role: !GetAtt BlueGreenFlipLambdaRole.Arn
+
+  BlueGreenFlipLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub lambda-${GitHubRepo}-blue-green-swap-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - elasticloadbalancing:*
+              - codepipeline:PutJobFailureResult
+              - codepipeline:PutJobSuccessResult
+            Resource: "*"
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      Roles:
+        -
+          !Ref BlueGreenFlipLambdaRole
+
+  BlueGreenFlipLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DependsOn: RestApi
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt BlueGreenFlipLambda.Arn
+      Principal: apigateway.amazonaws.com
+      # SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:qww6jhgste/*/POST/dev
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/POST/dev
+
+  BlueGreenFlipLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      #RoleName: !Sub lambda-${GitHubRepo}-blue-green-swap-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Ref GitHubRepo
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      CustomerId: String
+      Description: This key is blue green swap on fargate.
+      Enabled: Yes
+      Name: blue-green-swap-key
+
+  Resource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: dev
+      RestApiId: !Ref RestApi
+
+  Method:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: True
+      AuthorizationType: NONE
+      AuthorizerId: NONE
+      HttpMethod: POST
+      Integration:
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: 200
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:lambda-ecs-demo-php-simple-app-blue-green-swap/invocations
+        Type: AWS
+        PassthroughBehavior: WHEN_NO_MATCH
+      MethodResponses:
+        - StatusCode: 200
+      OperationName: Stringss
+      ResourceId: !Ref Resource
+      RestApiId: !Ref RestApi
