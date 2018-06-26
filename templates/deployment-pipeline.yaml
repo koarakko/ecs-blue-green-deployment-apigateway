@@ -30,60 +30,60 @@ Parameters:
 
 Resources:
 
-  BlueGreenFlipLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub lambda-${GitHubRepo}-blue-green-swap
-      Handler: blue_green_flip.handler
-      Runtime: python2.7
-      Description: !Sub lambda-${GitHubRepo}-blue-green-swap
-      Code:
-        S3Bucket: !Ref TemplateBucket
-        S3Key: scripts.zip
-      MemorySize: 128
-      Timeout: 60
-      Role: !GetAtt BlueGreenFlipLambdaRole.Arn
+  # BlueGreenFlipLambda:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     FunctionName: !Sub lambda-${GitHubRepo}-blue-green-swap
+  #     Handler: blue_green_flip.handler
+  #     Runtime: python2.7
+  #     Description: !Sub lambda-${GitHubRepo}-blue-green-swap
+  #     Code:
+  #       S3Bucket: !Ref TemplateBucket
+  #       S3Key: scripts.zip
+  #     MemorySize: 128
+  #     Timeout: 60
+  #     Role: !GetAtt BlueGreenFlipLambdaRole.Arn
+  #
+  # BlueGreenFlipLambdaRole:
+  #     Type: AWS::IAM::Role
+  #     Properties:
+  #       #RoleName: !Sub lambda-${GitHubRepo}-blue-green-swap-role
+  #       AssumeRolePolicyDocument:
+  #         Version: "2012-10-17"
+  #         Statement:
+  #           -
+  #             Effect: Allow
+  #             Principal:
+  #               Service:
+  #                 - lambda.amazonaws.com
+  #             Action:
+  #               - sts:AssumeRole
+  #       Path: /
 
-  BlueGreenFlipLambdaRole:
-      Type: AWS::IAM::Role
-      Properties:
-        #RoleName: !Sub lambda-${GitHubRepo}-blue-green-swap-role
-        AssumeRolePolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            -
-              Effect: Allow
-              Principal:
-                Service:
-                  - lambda.amazonaws.com
-              Action:
-                - sts:AssumeRole
-        Path: /
-
-  BlueGreenFlipLambdaPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub lambda-${GitHubRepo}-blue-green-swap-policy
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          -
-            Effect: Allow
-            Action:
-              - elasticloadbalancing:*
-              - codepipeline:PutJobFailureResult
-              - codepipeline:PutJobSuccessResult
-            Resource: "*"
-          -
-            Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-      Roles:
-        -
-          !Ref BlueGreenFlipLambdaRole
+  # BlueGreenFlipLambdaPolicy:
+  #   Type: AWS::IAM::Policy
+  #   Properties:
+  #     PolicyName: !Sub lambda-${GitHubRepo}-blue-green-swap-policy
+  #     PolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         -
+  #           Effect: Allow
+  #           Action:
+  #             - elasticloadbalancing:*
+  #             - codepipeline:PutJobFailureResult
+  #             - codepipeline:PutJobSuccessResult
+  #           Resource: "*"
+  #         -
+  #           Effect: Allow
+  #           Action:
+  #             - logs:CreateLogGroup
+  #             - logs:CreateLogStream
+  #             - logs:PutLogEvents
+  #           Resource: arn:aws:logs:*:*:*
+  #     Roles:
+  #       -
+  #         !Ref BlueGreenFlipLambdaRole
 
   Repository:
     Type: AWS::ECR::Repository
@@ -391,28 +391,28 @@ Resources:
                 - Name: Template
                 - Name: DiscoveryOutput
               RunOrder: 1
-            - Name: approve-blue-green-swap
-              ActionTypeId:
-                Category: Approval
-                Owner: AWS
-                Version: 1
-                Provider: Manual
-              Configuration:
-                CustomData: "Continue with blue-green swap ?"
-              RunOrder: 2
-            - Name: swap-target-group
-              ActionTypeId:
-                Category: Invoke
-                Owner: AWS
-                Version: 1
-                Provider: Lambda
-              Configuration:
-                FunctionName: !Ref BlueGreenFlipLambda
-                UserParameters: !Sub |
-                  {
-                    "ElbName": "${GitHubRepo}"
-                  }
-              RunOrder: 3
+            # - Name: approve-blue-green-swap
+            #   ActionTypeId:
+            #     Category: Approval
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: Manual
+            #   Configuration:
+            #     CustomData: "Continue with blue-green swap ?"
+            #   RunOrder: 2
+            # - Name: swap-target-group
+            #   ActionTypeId:
+            #     Category: Invoke
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: Lambda
+            #   Configuration:
+            #     FunctionName: !Ref BlueGreenFlipLambda
+            #     UserParameters: !Sub |
+            #       {
+            #         "ElbName": "${GitHubRepo}"
+            #       }
+            #   RunOrder: 3
 
 
 

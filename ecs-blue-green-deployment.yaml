@@ -77,6 +77,15 @@ Resources:
         Subnet1CIDR: 10.215.10.0/24
         Subnet2CIDR: 10.215.20.0/24
 
+  ApiGateway:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplateBucket}/templates/api-gateway.yaml
+      Parameters:
+        GitHubRepo: !Ref GitHubRepo
+        TemplateBucket: !Ref TemplateBucket
+
+
 
 Outputs:
  PipelineUrl:
