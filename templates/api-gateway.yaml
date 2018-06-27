@@ -8,6 +8,10 @@ Parameters:
   TemplateBucket:
     Type: String
 
+  ResourcePath:
+    Type: String
+    Default: swap
+
 
 Resources:
   BlueGreenFlipLambda:
@@ -60,7 +64,7 @@ Resources:
       FunctionName: !GetAtt BlueGreenFlipLambda.Arn
       Principal: apigateway.amazonaws.com
       # SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:qww6jhgste/*/POST/dev
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/POST/dev
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/POST/${ResourcePath}
 
   BlueGreenFlipLambdaRole:
     Type: AWS::IAM::Role
@@ -95,7 +99,7 @@ Resources:
     Type: "AWS::ApiGateway::Resource"
     Properties:
       ParentId: !GetAtt RestApi.RootResourceId
-      PathPart: dev
+      PathPart: !Ref ResourcePath
       RestApiId: !Ref RestApi
 
   Method:
@@ -111,11 +115,35 @@ Resources:
           - StatusCode: 200
         ContentHandling: CONVERT_TO_TEXT
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:lambda-ecs-demo-php-simple-app-blue-green-swap/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:lambda-${GitHubRepo}-blue-green-swap/invocations
         Type: AWS
         PassthroughBehavior: WHEN_NO_MATCH
       MethodResponses:
         - StatusCode: 200
-      OperationName: Stringss
+      # OperationName: Stringss
       ResourceId: !Ref Resource
       RestApiId: !Ref RestApi
+
+  Deployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: Method
+    Properties:
+      RestApiId: !Ref RestApi
+      StageName: deploy
+
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: RestApi
+    Properties:
+      ApiStages:
+      - ApiId: !Ref RestApi
+        Stage: deploy
+      UsagePlanName: !Sub ${GitHubRepo}-plan
+
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    DependsOn: UsagePlan
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
